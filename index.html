@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaletteForge | Intelligent Color Design Toolkit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;700;800&family=Merriweather:wght@700&family=Playfair+Display:wght@700&family=Montserrat:wght@700&family=Roboto+Slab:wght@700&family=Open+Sans&family=Lato&family=Nunito&family=Source+Sans+Pro&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0D0F14;
+            --bg-surface: #151921;
+            --bg-surface-hover: #1E2430;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --accent: #3B82F6;
+            --accent-hover: #60A5FA;
+            --border: #262D3D;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            
+            --theme-bg: #ffffff;
+            --theme-text: #000000;
+            --theme-primary: #3B82F6;
+            --theme-secondary: #10B981;
+            --theme-accent: #F59E0B;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; }
+        
+        .sidebar {
+            width: 280px; background: var(--bg-surface); border-right: 1px solid var(--border);
+            padding: 24px; display: flex; flex-direction: column; gap: 24px; flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .main-content {
+            flex-grow: 1; padding: 40px; display: flex; flex-direction: column; gap: 40px;
+            overflow-y: auto; max-width: 1200px; margin: 0 auto; width: 100%;
+        }
+
+        .logo { font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, #3B82F6, #8B5CF6, #EC4899); border-radius: 8px; }
+
+        .history-section h3 { font-size: 14px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+        .history-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .history-item { aspect-ratio: 1; border-radius: var(--radius-md); overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: var(--transition); }
+        .history-item:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .history-item img { width: 100%; height: 100%; object-fit: cover; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; }
+        .header-controls { display: flex; gap: 16px; align-items: center; }
+
+        .mode-toggle {
+            display: flex; background: var(--bg-surface); border-radius: 20px; padding: 4px;
+            border: 1px solid var(--border);
+        }
+        .mode-btn {
+            padding: 8px 16px; border-radius: 16px; border: none; background: transparent;
+            color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: var(--transition);
+        }
+        .mode-btn.active { background: var(--bg-surface-hover); color: var(--text-primary); }
+
+        .mood-tag {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 8px 16px;
+            border-radius: 20px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px;
+            opacity: 0; transform: translateY(-10px); transition: var(--transition);
+        }
+        .mood-tag.visible { opacity: 1; transform: translateY(0); }
+
+        /* Upload Zone */
+        .upload-zone {
+            background: var(--bg-surface); border: 2px dashed var(--border); border-radius: var(--radius-xl);
+            padding: 60px 40px; text-align: center; cursor: pointer; transition: var(--transition);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; position: relative; overflow: hidden;
+        }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: var(--bg-surface-hover); }
+        .upload-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.8; }
+        .upload-text { font-size: 18px; font-weight: 600; }
+        .upload-subtext { font-size: 14px; color: var(--text-secondary); }
+        #file-input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+        .image-preview-container { display: none; width: 100%; max-height: 300px; border-radius: var(--radius-lg); overflow: hidden; position: relative; }
+        .image-preview-container img { width: 100%; height: 100%; object-fit: contain; background: rgba(0,0,0,0.5); }
+
+        /* Manual Input Zone */
+        .manual-zone {
+            display: none; background: var(--bg-surface); border-radius: var(--radius-xl); padding: 40px; text-align: center;
+        }
+        .manual-input {
+            background: var(--bg-base); border: 1px solid var(--border); color: var(--text-primary);
+            padding: 16px 24px; border-radius: 12px; font-size: 24px; font-family: monospace; width: 250px;
+            text-align: center; margin-bottom: 16px;
+        }
+        .manual-input:focus { outline: none; border-color: var(--accent); }
+
+        /* Palette Display */
+        .palette-container { display: none; flex-direction: column; gap: 20px; }
+        .swatches-wrapper { display: flex; height: 200px; border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow); background: #000; }
+        .swatch-col { display: flex; flex-direction: column; transition: flex-grow 0.5s cubic-bezier(0.25, 1, 0.5, 1); position: relative; cursor: pointer; }
+        .swatch-col:hover { flex-grow: 2 !important; }
+        .swatch-color { flex-grow: 1; transition: var(--transition); }
+        
+        .swatch-info {
+            position: absolute; bottom: 0; left: 0; right: 0; padding: 16px;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); opacity: 0; transition: var(--transition);
+            display: flex; flex-direction: column; gap: 4px; pointer-events: none;
+        }
+        .swatch-col:hover .swatch-info { opacity: 1; pointer-events: auto; }
+        
+        .copyable { font-family: monospace; font-size: 14px; color: white; cursor: pointer; padding: 4px; border-radius: 4px; transition: var(--transition); }
+        .copyable:hover { background: rgba(255,255,255,0.2); }
+        .swatch-percent { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.5); color: white; font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 12px; backdrop-filter: blur(4px); }
+
+        .features-grid { display: none; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+
+        /* Smart Roles Preview */
+        .role-preview { background: var(--theme-bg); border-radius: var(--radius-md); padding: 24px; overflow: hidden; position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transition: background 0.3s; }
+        .role-nav { display: flex; justify-content: space-between; margin-bottom: 32px; }
+        .role-nav-logo { width: 24px; height: 24px; background: var(--theme-primary); border-radius: 4px; }
+        .role-hero h4 { color: var(--theme-text); font-size: 24px; margin-bottom: 12px; transition: color 0.3s; }
+        .role-hero p { color: var(--theme-text); opacity: 0.7; font-size: 14px; margin-bottom: 24px; transition: color 0.3s; }
+        .role-btn { background: var(--theme-primary); color: var(--theme-bg); border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .role-accent-blob { position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--theme-accent); border-radius: 50%; filter: blur(30px); opacity: 0.5; }
+        .role-assignments { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+        .role-row { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+        .role-label { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+        .role-color-box { display: flex; align-items: center; gap: 8px; }
+        .role-color-swatch { width: 24px; height: 24px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+
+        /* Contrast Checker */
+        .contrast-matrix { display: grid; grid-template-columns: auto repeat(5, 1fr); gap: 4px; overflow-x: auto; }
+        .matrix-header { font-size: 12px; color: var(--text-secondary); text-align: center; padding: 8px; }
+        .matrix-cell { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; position: relative; }
+        .matrix-cell span { font-size: 16px; }
+        .pass-aaa { border: 2px solid #10B981; }
+        .pass-aa { border: 2px solid #F59E0B; }
+        .fail { border: 2px solid #EF4444; opacity: 0.3; }
+        .contrast-legend { display: flex; gap: 16px; font-size: 12px; margin-top: 16px; color: var(--text-secondary); }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* Font Pairing */
+        .font-pairings { display: flex; flex-direction: column; gap: 16px; }
+        .font-pair { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px; position: relative; transition: var(--transition); }
+        .font-pair:hover { border-color: var(--accent); }
+        .font-pair h4 { font-size: 20px; margin-bottom: 8px; color: var(--text-primary); }
+        .font-pair p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+        .font-copy { position: absolute; top: 16px; right: 16px; background: var(--bg-surface-hover); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+
+        /* Theme Generator */
+        .theme-slides { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; }
+        .slide { flex: 0 0 200px; height: 120px; border-radius: 8px; padding: 16px; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .slide-title { font-size: 16px; font-weight: bold; margin-bottom: 8px; }
+        .slide-text { font-size: 10px; opacity: 0.8; }
+        
+        .btn { padding: 12px 20px; border-radius: 8px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 8px; border: 1px solid transparent; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-secondary { background: rgba(255,255,255,0.05); color: var(--text-primary); border-color: var(--border); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: var(--text-secondary); }
+
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--bg-surface-hover); color: white; padding: 12px 24px; border-radius: 30px; box-shadow: var(--shadow); font-weight: 500; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1000; border: 1px solid var(--border); }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        /* Harmonies Container */
+        .harmonies-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+        .harmony-row { display: flex; gap: 8px; align-items: center; }
+        .harmony-label { width: 100px; font-size: 12px; color: var(--text-secondary); }
+        .harmony-swatches { display: flex; gap: 4px; flex-grow: 1; }
+        .h-swatch { height: 40px; flex-grow: 1; border-radius: 4px; cursor: pointer; }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 16px; flex-direction: row; align-items: center; overflow-x: auto;}
+            .history-section { display: none; }
+            .features-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            PaletteForge
+        </div>
+        <div class="history-section" id="history-section">
+            <h3>Recent Palettes</h3>
+            <div class="history-grid" id="history-grid"></div>
+            <button class="btn btn-secondary" style="width:100%; margin-top:16px; padding: 8px; font-size:12px;" onclick="clearHistory()">Clear History</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div>
+                <h1 style="font-size: 28px; margin-bottom: 4px;">Extract & Design</h1>
+                <p style="color: var(--text-secondary);">Generate professional color systems instantly.</p>
+            </div>
+            <div class="header-controls">
+                <div class="mood-tag" id="mood-tag">
+                    <span id="mood-icon">✨</span> <span id="mood-text">Analyzing Mood...</span>
+                </div>
+                <div class="mode-toggle">
+                    <button class="mode-btn active" id="btn-mode-image" onclick="setMode('image')">Image</button>
+                    <button class="mode-btn" id="btn-mode-manual" onclick="setMode('manual')">Manual</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Image Upload Mode -->
+        <div class="upload-zone" id="upload-zone">
+            <input type="file" id="file-input" accept="image/*">
+            <div class="image-preview-container" id="preview-container">
+                <img id="image-preview" src="" alt="Preview">
+            </div>
+            <div id="upload-prompt">
+                <div class="upload-icon">🎨</div>
+                <div class="upload-text">Drag & Drop an image here</div>
+                <div class="upload-subtext">or click to browse (JPG, PNG, WebP)</div>
+            </div>
+        </div>
+
+        <!-- Manual Input Mode -->
+        <div class="manual-zone" id="manual-zone">
+            <h3>Enter a Hex Code</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 24px;">We'll generate beautiful harmonies for you.</p>
+            <input type="text" class="manual-input" id="hex-input" placeholder="#3B82F6" maxlength="7" onkeyup="handleManualInput(event)">
+            
+            <div class="harmonies-grid" id="harmonies-container" style="display: none;">
+                <div class="harmony-row" id="harm-complementary"></div>
+                <div class="harmony-row" id="harm-triadic"></div>
+                <div class="harmony-row" id="harm-analogous"></div>
+                <div class="harmony-row" id="harm-split"></div>
+            </div>
+        </div>
+
+        <div class="palette-container" id="palette-container">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Extracted Palette</h3>
+                    <button class="btn btn-secondary" onclick="exportJSON()" style="padding: 6px 12px; font-size: 12px;">Export JSON</button>
+                </div>
+                <div class="swatches-wrapper" id="swatches-wrapper"></div>
+            </div>
+
+            <div class="features-grid" id="features-grid">
+                
+                <!-- Smart Roles -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Smart Roles</h3>
+                    </div>
+                    <div class="role-preview">
+                        <div class="role-accent-blob"></div>
+                        <div class="role-nav">
+                            <div class="role-nav-logo"></div>
+                            <div style="display:flex; gap:12px;">
+                                <div style="width:30px; height:6px; border-radius:3px; background:var(--theme-text); opacity:0.3"></div>
+                                <div style="width:30px; height:6px; border-radius:3px; background:var(--theme-text); opacity:0.3"></div>
+                            </div>
+                        </div>
+                        <div class="role-hero">
+                            <h4>Design System</h4>
+                            <p>Colors intelligently assigned based on luminance to ensure readability.</p>
+                            <button class="role-btn">Get Started</button>
+                        </div>
+                    </div>
+                    <div class="role-assignments" id="role-assignments"></div>
+                </div>
+
+                <!-- Contrast Checker -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Contrast Matrix (WCAG)</h3>
+                    </div>
+                    <div class="contrast-matrix" id="contrast-matrix"></div>
+                    <div class="contrast-legend">
+                        <div class="legend-item"><div class="legend-dot" style="background:#10B981"></div> AAA Pass (7:1+)</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div> AA Pass (4.5:1+)</div>
+                        <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div> Fail</div>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
+                        Warning: Using failing combinations for text and background will make your UI unreadable.
+                    </div>
+                </div>
+
+                <!-- Font Pairings -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Suggested Font Pairings</h3>
+                    </div>
+                    <div class="font-pairings" id="font-pairings"></div>
+                </div>
+
+                <!-- Theme Generator -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Presentation Theme</h3>
+                    </div>
+                    <div class="theme-slides" id="theme-slides"></div>
+                </div>
+
+                <!-- Exports -->
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-header">
+                        <h3 class="card-title">Export Options</h3>
+                    </div>
+                    <div class="export-actions">
+                        <button class="btn btn-primary" onclick="exportCSS()">Export CSS Variables</button>
+                        <button class="btn btn-secondary" onclick="exportHexList()">Copy All Hex Codes</button>
+                        <button class="btn btn-secondary" onclick="exportPNGCard()">Download PNG Card</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast">Copied to clipboard!</div>
+
+    <script>
+        // DOM Elements
+        const uploadZone = document.getElementById('upload-zone');
+        const manualZone = document.getElementById('manual-zone');
+        const fileInput = document.getElementById('file-input');
+        const imgPreview = document.getElementById('image-preview');
+        const previewContainer = document.getElementById('preview-container');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const paletteContainer = document.getElementById('palette-container');
+        const featuresGrid = document.getElementById('features-grid');
+        const swatchesWrapper = document.getElementById('swatches-wrapper');
+        const roleAssignments = document.getElementById('role-assignments');
+        const contrastMatrix = document.getElementById('contrast-matrix');
+        const fontPairings = document.getElementById('font-pairings');
+        const themeSlides = document.getElementById('theme-slides');
+        const moodTag = document.getElementById('mood-tag');
+        const moodText = document.getElementById('mood-text');
+        const moodIcon = document.getElementById('mood-icon');
+        const historyGrid = document.getElementById('history-grid');
+
+        let currentColors = [];
+        let currentRoles = {};
+        let currentMood = "";
+
+        // --- Core Algorithm: K-Means Clustering ---
+        function extractPalette(img) {
+            const maxDim = 200;
+            let w = img.naturalWidth, h = img.naturalHeight;
+            if (w > maxDim || h > maxDim) {
+                if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                else { w = Math.round(w * maxDim / h); h = maxDim; }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const data = ctx.getImageData(0, 0, w, h).data;
+
+            const pixels = [];
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i + 3] < 128) continue;
+                pixels.push([data[i], data[i + 1], data[i + 2]]);
+            }
+
+            if (pixels.length === 0) return;
+
+            const k = 6;
+            let centroids = [];
+            for (let i = 0; i < k; i++) centroids.push(pixels[Math.floor(Math.random() * pixels.length)]);
+
+            let assignments = new Array(pixels.length);
+            let converged = false;
+            let iterations = 0;
+
+            while (!converged && iterations < 15) {
+                for (let i = 0; i < pixels.length; i++) {
+                    const p = pixels[i];
+                    let minDist = Infinity, bestK = 0;
+                    for (let j = 0; j < k; j++) {
+                        const c = centroids[j];
+                        const dist = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2;
+                        if (dist < minDist) { minDist = dist; bestK = j; }
+                    }
+                    assignments[i] = bestK;
+                }
+
+                const newCentroids = Array(k).fill(0).map(() => [0, 0, 0]);
+                const counts = Array(k).fill(0);
+                for (let i = 0; i < pixels.length; i++) {
+                    const c = assignments[i];
+                    newCentroids[c][0] += pixels[i][0];
+                    newCentroids[c][1] += pixels[i][1];
+                    newCentroids[c][2] += pixels[i][2];
+                    counts[c]++;
+                }
+
+                converged = true;
+                for (let j = 0; j < k; j++) {
+                    if (counts[j] === 0) {
+                        newCentroids[j] = pixels[Math.floor(Math.random() * pixels.length)];
+                        converged = false;
+                    } else {
+                        newCentroids[j][0] = Math.round(newCentroids[j][0] / counts[j]);
+                        newCentroids[j][1] = Math.round(newCentroids[j][1] / counts[j]);
+                        newCentroids[j][2] = Math.round(newCentroids[j][2] / counts[j]);
+                        if (newCentroids[j][0] !== centroids[j][0] || newCentroids[j][1] !== centroids[j][1] || newCentroids[j][2] !== centroids[j][2]) converged = false;
+                    }
+                }
+                centroids = newCentroids;
+                iterations++;
+            }
+
+            const counts = Array(k).fill(0);
+            for (let i = 0; i < pixels.length; i++) counts[assignments[i]]++;
+            
+            let results = centroids.map((c, i) => ({
+                rgb: c, count: counts[i], pct: counts[i] / pixels.length
+            })).sort((a, b) => b.count - a.count);
+
+            processColors(results);
+        }
+
+        // --- Color Math & Conversions ---
+        function rgbToHex(r, g, b) {
+            return "#" + [r, g, b].map(x => {
+                const hex = x.toString(16).toUpperCase();
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+        }
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [0,0,0];
+        }
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) { h = s = 0; } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+        }
+        function hslToRgb(h, s, l) {
+            h /= 360; s /= 100; l /= 100;
+            let r, g, b;
+            if (s === 0) { r = g = b = l; } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1; if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
+
+        function getLuminance(r, g, b) {
+            const a = [r, g, b].map(v => {
+                v /= 255;
+                return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            });
+            return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+        }
+
+        function getContrast(lum1, lum2) {
+            return (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
+        }
+
+        // --- Processing & UI Updates ---
+        function processColors(rawColors) {
+            currentColors = rawColors.map(c => {
+                const [r, g, b] = c.rgb;
+                const hex = rgbToHex(r, g, b);
+                return { r, g, b, hex, hsl: rgbToHsl(r, g, b), luma: getLuminance(r, g, b), pct: c.pct || (1/rawColors.length) };
+            });
+
+            // Filter duplicates
+            const unique = [];
+            for(const c of currentColors) {
+                let dup = false;
+                for(const u of unique) {
+                    if (Math.abs(c.r-u.r) + Math.abs(c.g-u.g) + Math.abs(c.b-u.b) < 30) { dup = true; u.pct += c.pct; break; }
+                }
+                if (!dup) unique.push(c);
+            }
+            currentColors = unique.sort((a,b)=>b.pct - a.pct);
+
+            assignRoles();
+            calculateMood();
+            renderSwatches();
+            renderRoles();
+            renderContrastMatrix();
+            renderFontPairings();
+            renderThemeSlides();
+            
+            paletteContainer.style.display = 'flex';
+            featuresGrid.style.display = 'grid';
+            
+            if (document.getElementById('btn-mode-image').classList.contains('active')) {
+                saveToHistory(imgPreview.src, currentColors);
+            }
+        }
+
+        function assignRoles() {
+            const byLuma = [...currentColors].sort((a, b) => b.luma - a.luma);
+            const bySat = [...currentColors].sort((a, b) => b.hsl[1] - a.hsl[1]);
+            const byDom = [...currentColors];
+
+            const isDarkTheme = currentColors.reduce((s, c) => s + (c.luma * c.pct), 0) < 0.3;
+            let bg, text, accent, primary, secondary;
+
+            if (isDarkTheme) { bg = byLuma[byLuma.length - 1]; text = byLuma[0]; }
+            else { bg = byLuma[0]; text = byLuma[byLuma.length - 1]; }
+
+            accent = bySat[0];
+            if (accent === bg || accent === text) accent = bySat.length > 1 ? bySat[1] : accent;
+
+            let available = byDom.filter(c => c !== bg && c !== text && c !== accent);
+            if (available.length > 0) {
+                primary = available[0];
+                secondary = available.length > 1 ? available[1] : primary;
+            } else { primary = text; secondary = bg; }
+
+            currentRoles = { Background: bg, Text: text, Primary: primary, Secondary: secondary, Accent: accent };
+
+            document.documentElement.style.setProperty('--theme-bg', bg.hex);
+            document.documentElement.style.setProperty('--theme-text', text.hex);
+            document.documentElement.style.setProperty('--theme-primary', primary.hex);
+            document.documentElement.style.setProperty('--theme-secondary', secondary.hex);
+            document.documentElement.style.setProperty('--theme-accent', accent.hex);
+        }
+
+        function calculateMood() {
+            let avgH = 0, avgS = 0, avgL = 0;
+            currentColors.forEach(c => { avgH += c.hsl[0] * c.pct; avgS += c.hsl[1] * c.pct; avgL += c.hsl[2] * c.pct; });
+
+            let tempText = "", icon = "✨";
+            if (avgS > 60) { tempText += "Vibrant & "; icon = "🔥"; }
+            else if (avgS < 30) { tempText += "Muted & "; icon = "🌫️"; }
+            else { tempText += "Balanced & "; icon = "⚖️"; }
+
+            if (avgL > 70) tempText += "Airy";
+            else if (avgL < 30) { tempText += "Moody"; icon = "🌙"; }
+            else {
+                if (avgH < 60 || avgH > 300) tempText += "Warm";
+                else if (avgH > 120 && avgH < 240) { tempText += "Cool"; icon = "🧊"; }
+                else tempText += "Natural";
+            }
+
+            currentMood = tempText;
+            moodText.textContent = tempText;
+            moodIcon.textContent = icon;
+            moodTag.classList.add('visible');
+        }
+
+        function renderSwatches() {
+            swatchesWrapper.innerHTML = '';
+            currentColors.forEach((c, idx) => {
+                const col = document.createElement('div');
+                col.className = 'swatch-col';
+                col.style.flexGrow = Math.max(1, Math.round(c.pct * 10));
+                
+                const textColor = c.luma > 0.5 ? '#000' : '#FFF';
+                col.innerHTML = `
+                    <div class="swatch-color" style="background-color: ${c.hex}"></div>
+                    <div class="swatch-percent" style="color: ${textColor}">${Math.round(c.pct * 100)}%</div>
+                    <div class="swatch-info">
+                        <div class="copyable" onclick="copyToClipboard('${c.hex}')">HEX: ${c.hex}</div>
+                        <div class="copyable" onclick="copyToClipboard('rgb(${c.r}, ${c.g}, ${c.b})')">RGB: ${c.r}, ${c.g}, ${c.b}</div>
+                        <div class="copyable" onclick="copyToClipboard('hsl(${c.hsl[0]}, ${c.hsl[1]}%, ${c.hsl[2]}%)')">HSL: ${c.hsl[0]}, ${c.hsl[1]}%, ${c.hsl[2]}%</div>
+                    </div>
+                `;
+                col.style.opacity = '0';
+                col.style.transform = 'translateY(20px)';
+                swatchesWrapper.appendChild(col);
+                setTimeout(() => {
+                    col.style.transition = 'all 0.5s cubic-bezier(0.25, 1, 0.5, 1)';
+                    col.style.opacity = '1'; col.style.transform = 'translateY(0)';
+                }, idx * 100);
+            });
+        }
+
+        function renderRoles() {
+            roleAssignments.innerHTML = '';
+            for (const [role, color] of Object.entries(currentRoles)) {
+                const row = document.createElement('div');
+                row.className = 'role-row';
+                row.innerHTML = `
+                    <span class="role-label">${role}</span>
+                    <div class="role-color-box">
+                        <span style="font-family:monospace; font-size:12px; color:var(--text-secondary)">${color.hex}</span>
+                        <div class="role-color-swatch" style="background-color: ${color.hex}"></div>
+                    </div>
+                `;
+                roleAssignments.appendChild(row);
+            }
+        }
+
+        function renderContrastMatrix() {
+            contrastMatrix.innerHTML = '';
+            contrastMatrix.appendChild(document.createElement('div'));
+            currentColors.slice(0, 5).forEach(c => {
+                const h = document.createElement('div');
+                h.className = 'matrix-header'; h.textContent = c.hex;
+                contrastMatrix.appendChild(h);
+            });
+
+            currentColors.slice(0, 5).forEach(bg => {
+                const rh = document.createElement('div');
+                rh.className = 'matrix-header'; rh.style.display = 'flex'; rh.style.alignItems = 'center'; rh.style.justifyContent = 'flex-end'; rh.textContent = bg.hex;
+                contrastMatrix.appendChild(rh);
+
+                currentColors.slice(0, 5).forEach(fg => {
+                    const cell = document.createElement('div');
+                    cell.className = 'matrix-cell';
+                    cell.style.backgroundColor = bg.hex; cell.style.color = fg.hex;
+                    
+                    if (bg.hex === fg.hex) { cell.innerHTML = '-'; } 
+                    else {
+                        const cr = getContrast(bg.luma, fg.luma);
+                        let cls = 'fail', icon = '✕';
+                        if (cr >= 7) { cls = 'pass-aaa'; icon = '✓✓'; }
+                        else if (cr >= 4.5) { cls = 'pass-aa'; icon = '✓'; }
+                        cell.classList.add(cls);
+                        cell.innerHTML = `<span>${icon}</span>${cr.toFixed(1)}`;
+                    }
+                    contrastMatrix.appendChild(cell);
+                });
+            });
+        }
+
+        function renderFontPairings() {
+            fontPairings.innerHTML = '';
+            const pairs = [];
+            if (currentMood.includes('Vibrant') || currentMood.includes('Warm')) {
+                pairs.push({ h: 'Playfair Display', p: 'Source Sans Pro', link: 'family=Playfair+Display:wght@700&family=Source+Sans+Pro' });
+                pairs.push({ h: 'Montserrat', p: 'Lato', link: 'family=Montserrat:wght@700&family=Lato' });
+            } else if (currentMood.includes('Muted') || currentMood.includes('Cool')) {
+                pairs.push({ h: 'Merriweather', p: 'Nunito', link: 'family=Merriweather:wght@700&family=Nunito' });
+                pairs.push({ h: 'Roboto Slab', p: 'Open Sans', link: 'family=Roboto+Slab:wght@700&family=Open+Sans' });
+            } else {
+                pairs.push({ h: 'Plus Jakarta Sans', p: 'Inter', link: 'family=Inter:wght@400;500&family=Plus+Jakarta+Sans:wght@700' });
+                pairs.push({ h: 'Montserrat', p: 'Open Sans', link: 'family=Montserrat:wght@700&family=Open+Sans' });
+            }
+
+            pairs.forEach(pair => {
+                const div = document.createElement('div');
+                div.className = 'font-pair';
+                div.innerHTML = `
+                    <h4 style="font-family: '${pair.h}', serif">${pair.h}</h4>
+                    <p style="font-family: '${pair.p}', sans-serif">Combined with ${pair.p} for body text. This creates a balanced, highly legible hierarchy that matches your palette's tone.</p>
+                    <button class="font-copy" onclick="copyToClipboard('@import url(\\'https://fonts.googleapis.com/css2?${pair.link}&display=swap\\');')">Copy Import</button>
+                `;
+                fontPairings.appendChild(div);
+            });
+        }
+
+        function renderThemeSlides() {
+            themeSlides.innerHTML = '';
+            const bg = currentRoles.Background.hex;
+            const text = currentRoles.Text.hex;
+            const primary = currentRoles.Primary.hex;
+            const accent = currentRoles.Accent.hex;
+
+            // Title Slide
+            themeSlides.innerHTML += `
+                <div class="slide" style="background: ${primary}; color: ${bg}; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+                    <div class="slide-title" style="color: ${bg}">Presentation Title</div>
+                    <div class="slide-text" style="color: ${bg}">Subtitle or Presenter Name</div>
+                </div>
+            `;
+            // Content Slide
+            themeSlides.innerHTML += `
+                <div class="slide" style="background: ${bg}; color: ${text};">
+                    <div class="slide-title" style="color: ${primary}">Key Concept</div>
+                    <div style="width: 20px; height: 3px; background: ${accent}; margin-bottom: 8px;"></div>
+                    <div class="slide-text">• First important point<br>• Second detailed metric<br>• Concluding thought</div>
+                </div>
+            `;
+            // Accent Slide
+            themeSlides.innerHTML += `
+                <div class="slide" style="background: ${accent}; color: ${text}; display: flex; align-items: center; justify-content: center;">
+                    <div class="slide-title" style="font-size: 20px;">Big Impact Statistic</div>
+                </div>
+            `;
+        }
+
+        // --- Export Functions ---
+        function copyToClipboard(text) { navigator.clipboard.writeText(text).then(() => showToast(`Copied!`)); }
+        function showToast(msg) {
+            const toast = document.getElementById('toast'); toast.textContent = msg;
+            toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        function exportCSS() {
+            let css = `:root {\n`;
+            currentColors.forEach((c, i) => css += `  --color-${i+1}: ${c.hex};\n`);
+            css += `\n  /* Smart Roles */\n`;
+            for (const [role, color] of Object.entries(currentRoles)) css += `  --theme-${role.toLowerCase()}: ${color.hex};\n`;
+            css += `}`;
+            downloadBlob(css, 'paletteforge.css', 'text/css');
+        }
+
+        function exportJSON() {
+            const data = {
+                colors: currentColors.map(c => ({ hex: c.hex, rgb: `rgb(${c.r}, ${c.g}, ${c.b})`, hsl: `hsl(${c.hsl[0]}, ${c.hsl[1]}%, ${c.hsl[2]}%)` })),
+                roles: Object.fromEntries(Object.entries(currentRoles).map(([k,v]) => [k, v.hex]))
+            };
+            downloadBlob(JSON.stringify(data, null, 2), 'paletteforge.json', 'application/json');
+        }
+
+        function exportHexList() { copyToClipboard(currentColors.map(c => c.hex).join(', ')); }
+
+        function exportPNGCard() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 800; canvas.height = 400; const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#121620'; ctx.fillRect(0, 0, 800, 400);
+            ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 24px Inter'; ctx.fillText('PaletteForge Export', 40, 50);
+            const swatchW = (800 - 80) / currentColors.length;
+            currentColors.forEach((c, i) => {
+                const x = 40 + (i * swatchW);
+                ctx.fillStyle = c.hex; ctx.fillRect(x, 80, swatchW - 10, 200);
+                ctx.fillStyle = '#94A3B8'; ctx.font = '16px monospace'; ctx.fillText(c.hex, x, 310);
+            });
+            const link = document.createElement('a'); link.download = 'paletteforge.png';
+            link.href = canvas.toDataURL('image/png'); link.click();
+        }
+
+        function downloadBlob(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+        }
+
+        // --- History ---
+        function saveToHistory(imgSrc, colors) {
+            if (!imgSrc.startsWith('data:')) return;
+            let history = JSON.parse(localStorage.getItem('pf_history') || '[]');
+            history.unshift({ img: imgSrc, hexes: colors.map(c => c.hex).slice(0,4) });
+            if (history.length > 6) history.pop();
+            localStorage.setItem('pf_history', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('pf_history') || '[]');
+            historyGrid.innerHTML = '';
+            if(history.length === 0) { historyGrid.innerHTML = '<div style="color:var(--text-secondary); font-size:12px; grid-column:1/-1;">No history yet.</div>'; return; }
+            history.forEach(item => {
+                const div = document.createElement('div'); div.className = 'history-item';
+                div.innerHTML = `<img src="${item.img}" alt="History item">`;
+                div.onclick = () => { setMode('image'); loadFromHistory(item.img); };
+                historyGrid.appendChild(div);
+            });
+        }
+
+        function loadFromHistory(src) {
+            imgPreview.src = src; previewContainer.style.display = 'block'; uploadPrompt.style.display = 'none';
+            setTimeout(() => extractPalette(imgPreview), 50);
+        }
+        function clearHistory() { localStorage.removeItem('pf_history'); loadHistory(); }
+
+        // --- UI Modes & Interactions ---
+        function setMode(mode) {
+            document.getElementById('btn-mode-image').classList.remove('active');
+            document.getElementById('btn-mode-manual').classList.remove('active');
+            document.getElementById(`btn-mode-${mode}`).classList.add('active');
+            
+            paletteContainer.style.display = 'none';
+            featuresGrid.style.display = 'none';
+            moodTag.classList.remove('visible');
+
+            if (mode === 'image') {
+                uploadZone.style.display = 'flex';
+                manualZone.style.display = 'none';
+            } else {
+                uploadZone.style.display = 'none';
+                manualZone.style.display = 'block';
+                document.getElementById('hex-input').focus();
+            }
+        }
+
+        uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', e => { e.preventDefault(); uploadZone.classList.remove('dragover'); });
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault(); uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', e => { if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]); });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) { showToast("Please upload an image file"); return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                imgPreview.src = e.target.result; previewContainer.style.display = 'block'; uploadPrompt.style.display = 'none';
+                paletteContainer.style.display = 'none'; featuresGrid.style.display = 'none'; moodTag.classList.remove('visible');
+                imgPreview.onload = () => extractPalette(imgPreview);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- Manual Mode Harmonies ---
+        function handleManualInput(e) {
+            let hex = e.target.value;
+            if (!hex.startsWith('#')) { hex = '#' + hex; e.target.value = hex; }
+            if (hex.length === 7) {
+                const rgb = hexToRgb(hex);
+                const hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+                generateHarmonies(hsl, hex);
+                
+                // create a mock rawColors array to feed into processColors to show the full dashboard!
+                let rawColors = [];
+                // Add base
+                rawColors.push({ rgb: rgb, pct: 0.3 });
+                // Add some variations (analogous / complement) to make a palette
+                const c1 = hslToRgb((hsl[0] + 30) % 360, hsl[1], hsl[2]);
+                const c2 = hslToRgb((hsl[0] - 30 + 360) % 360, hsl[1], hsl[2]);
+                const c3 = hslToRgb((hsl[0] + 180) % 360, hsl[1], hsl[2]);
+                const c4 = hslToRgb(hsl[0], hsl[1], Math.max(0, hsl[2] - 30));
+                const c5 = hslToRgb(hsl[0], hsl[1], Math.min(100, hsl[2] + 30));
+                rawColors.push({ rgb: c1, pct: 0.2 });
+                rawColors.push({ rgb: c2, pct: 0.15 });
+                rawColors.push({ rgb: c3, pct: 0.15 });
+                rawColors.push({ rgb: c4, pct: 0.1 });
+                rawColors.push({ rgb: c5, pct: 0.1 });
+                processColors(rawColors);
+            }
+        }
+
+        function generateHarmonies(baseHsl, baseHex) {
+            document.getElementById('harmonies-container').style.display = 'flex';
+            const h = baseHsl[0], s = baseHsl[1], l = baseHsl[2];
+
+            const renderHarmony = (id, label, hsls) => {
+                const el = document.getElementById(id);
+                let html = `<div class="harmony-label">${label}</div><div class="harmony-swatches">`;
+                hsls.forEach(c => {
+                    const rgb = hslToRgb(c[0], c[1], c[2]);
+                    const hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+                    html += `<div class="h-swatch" style="background:${hex}" title="${hex}" onclick="copyToClipboard('${hex}')"></div>`;
+                });
+                html += `</div>`;
+                el.innerHTML = html;
+            };
+
+            // Complementary (180)
+            renderHarmony('harm-complementary', 'Complementary', [baseHsl, [(h + 180) % 360, s, l]]);
+            // Analogous (+30, -30)
+            renderHarmony('harm-analogous', 'Analogous', [[(h - 30 + 360) % 360, s, l], baseHsl, [(h + 30) % 360, s, l]]);
+            // Triadic (+120, +240)
+            renderHarmony('harm-triadic', 'Triadic', [baseHsl, [(h + 120) % 360, s, l], [(h + 240) % 360, s, l]]);
+            // Split (+150, +210)
+            renderHarmony('harm-split', 'Split-Comp', [baseHsl, [(h + 150) % 360, s, l], [(h + 210) % 360, s, l]]);
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>
